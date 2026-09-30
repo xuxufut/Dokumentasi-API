@@ -1,0 +1,2858 @@
+openapi: 3.0.3
+
+info:
+  title: School Portal API
+  version: 1.0.0
+  description: API School Portal untuk siswa dan orang tua yang terintegrasi dengan Odoo ERP.
+  contact:
+    name: School Portal Development Team
+
+servers:
+  - url: http://localhost:8069
+    description: Local Odoo Server
+
+tags:
+
+  - name: Authentication
+    description: Autentikasi dan session pengguna
+
+  - name: Dashboard
+    description: Ringkasan informasi portal
+
+  - name: Profile
+    description: Biodata dan profil pengguna
+
+  - name: Academic
+    description: Jadwal, nilai dan rapor
+
+  - name: Finance
+    description: SPP dan pembayaran
+
+  - name: Cooperative
+    description: Koperasi sekolah dan pesanan
+
+  - name: Library
+    description: OPAC, peminjaman dan pengembalian buku
+
+  - name: Attendance
+    description: Kehadiran siswa
+
+  - name: Student Notes
+    description: Catatan siswa
+
+  - name: Announcements
+    description: Pengumuman sekolah
+
+
+paths:
+
+  # =========================================================
+  # AUTHENTICATION
+  # =========================================================
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      operationId: loginUser
+      summary: Login pengguna
+      description: Melakukan autentikasi pengguna School Portal.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+
+      responses:
+
+        "200":
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+
+        "401":
+          description: Username atau password salah
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+        "422":
+          description: Data login tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+
+  /api/v1/auth/me:
+    get:
+      tags:
+        - Authentication
+      operationId: getCurrentUser
+      summary: Mendapatkan pengguna yang sedang login
+
+      security:
+        - bearerAuth: []
+
+      responses:
+
+        "200":
+          description: Data pengguna berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+
+        "401":
+          description: Token tidak valid atau pengguna belum login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Authentication
+      operationId: logoutUser
+      summary: Logout pengguna
+
+      security:
+        - bearerAuth: []
+
+      responses:
+
+        "200":
+          description: Logout berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # DASHBOARD
+  # =========================================================
+
+  /api/v1/dashboard:
+    get:
+      tags:
+        - Dashboard
+      operationId: getDashboard
+      summary: Mendapatkan dashboard pengguna
+
+      security:
+        - bearerAuth: []
+
+      responses:
+
+        "200":
+          description: Dashboard berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # PROFILE
+  # =========================================================
+
+  /api/v1/profile:
+    get:
+      tags:
+        - Profile
+      operationId: getProfile
+      summary: Mendapatkan profil pengguna
+
+      security:
+        - bearerAuth: []
+
+      responses:
+
+        "200":
+          description: Profil berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/profile/student:
+    get:
+      tags:
+        - Profile
+      operationId: getStudentProfile
+      summary: Mendapatkan biodata siswa
+
+      security:
+        - bearerAuth: []
+
+      responses:
+
+        "200":
+          description: Biodata siswa berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProfileResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+        "403":
+          description: Pengguna tidak memiliki akses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/profile/parent/children:
+    get:
+      tags:
+        - Profile
+      operationId: getParentChildren
+      summary: Mendapatkan daftar anak orang tua
+      description: Mengambil daftar siswa yang terhubung dengan akun orang tua.
+
+      security:
+        - bearerAuth: []
+
+      responses:
+
+        "200":
+          description: Data anak berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChildrenResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+        "403":
+          description: Pengguna bukan orang tua
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # ACADEMIC - SCHEDULE
+  # =========================================================
+
+  /api/v1/academic/schedules:
+    get:
+      tags:
+        - Academic
+      operationId: getSchedules
+      summary: Mendapatkan jadwal pelajaran
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-09-30"
+
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-09-01"
+
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-09-30"
+
+        - name: class_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 10
+
+      responses:
+
+        "200":
+          description: Jadwal berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleListResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # ACADEMIC - GRADES
+  # =========================================================
+
+  /api/v1/academic/grades:
+    get:
+      tags:
+        - Academic
+      operationId: getGrades
+      summary: Mendapatkan nilai siswa
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: semester
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ganjil
+              - genap
+          example: ganjil
+
+        - name: academic_year
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "2026/2027"
+
+        - name: subject_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 5
+
+      responses:
+
+        "200":
+          description: Nilai berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GradeListResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # ACADEMIC - REPORT
+  # =========================================================
+
+  /api/v1/academic/report:
+    get:
+      tags:
+        - Academic
+      operationId: getReport
+      summary: Mendapatkan e-rapor siswa
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: semester
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - ganjil
+              - genap
+          example: ganjil
+
+        - name: academic_year
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "2026/2027"
+
+      responses:
+
+        "200":
+          description: Rapor berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/academic/report/download:
+    get:
+      tags:
+        - Academic
+      operationId: downloadReport
+      summary: Download e-rapor dalam PDF
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: semester
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - ganjil
+              - genap
+
+        - name: academic_year
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "2026/2027"
+
+      responses:
+
+        "200":
+          description: File e-rapor PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # FINANCE - SPP
+  # =========================================================
+
+  /api/v1/finance/spp:
+    get:
+      tags:
+        - Finance
+      operationId: getSPP
+      summary: Mendapatkan tagihan SPP
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - unpaid
+              - partially_paid
+              - paid
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+
+      responses:
+
+        "200":
+          description: Tagihan SPP berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SPPListResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/finance/spp/{id}:
+    get:
+      tags:
+        - Finance
+      operationId: getSPPDetail
+      summary: Mendapatkan detail tagihan SPP
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1001
+
+      responses:
+
+        "200":
+          description: Detail SPP berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SPPResponse"
+
+        "404":
+          description: Tagihan tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/finance/spp/{id}/payment-proof:
+    post:
+      tags:
+        - Finance
+      operationId: uploadPaymentProof
+      summary: Upload bukti pembayaran SPP
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1001
+
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/PaymentProofRequest"
+
+      responses:
+
+        "201":
+          description: Bukti pembayaran berhasil diunggah
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentProofResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+        "422":
+          description: Data tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+
+  # =========================================================
+  # COOPERATIVE - PRODUCTS
+  # =========================================================
+
+  /api/v1/cooperative/products:
+    get:
+      tags:
+        - Cooperative
+      operationId: getProducts
+      summary: Mendapatkan katalog produk koperasi
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "seragam"
+
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Seragam"
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+
+      responses:
+
+        "200":
+          description: Produk berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/cooperative/products/{id}:
+    get:
+      tags:
+        - Cooperative
+      operationId: getProduct
+      summary: Mendapatkan detail produk
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+
+      responses:
+
+        "200":
+          description: Detail produk berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+
+        "404":
+          description: Produk tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # COOPERATIVE - ORDERS
+  # =========================================================
+
+  /api/v1/cooperative/orders:
+    get:
+      tags:
+        - Cooperative
+      operationId: getOrders
+      summary: Mendapatkan riwayat pesanan
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - draft
+              - processed
+              - ready
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+
+      responses:
+
+        "200":
+          description: Pesanan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+
+
+    post:
+      tags:
+        - Cooperative
+      operationId: checkoutOrder
+      summary: Checkout dan membuat pesanan
+      description: Membuat pesanan koperasi berdasarkan isi cart. Pesanan dibuat sebagai draft di Odoo.
+
+      security:
+        - bearerAuth: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+
+      responses:
+
+        "201":
+          description: Pesanan berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+
+        "401":
+          description: Token tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+        "422":
+          description: Data pesanan tidak valid atau stok tidak mencukupi
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+
+  /api/v1/cooperative/orders/{id}:
+    get:
+      tags:
+        - Cooperative
+      operationId: getOrder
+      summary: Mendapatkan detail pesanan
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1001
+
+      responses:
+
+        "200":
+          description: Detail pesanan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+
+        "404":
+          description: Pesanan tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # LIBRARY - OPAC
+  # =========================================================
+
+  /api/v1/library/books:
+    get:
+      tags:
+        - Library
+      operationId: searchBooks
+      summary: Mencari buku perpustakaan
+      description: OPAC untuk mencari dan melihat ketersediaan buku.
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Laravel"
+
+        - name: author
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Taylor Otwell"
+
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Pemrograman"
+
+        - name: available
+          in: query
+          required: false
+          schema:
+            type: boolean
+          example: true
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+
+      responses:
+
+        "200":
+          description: Buku berhasil ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookListResponse"
+
+
+  /api/v1/library/books/{id}:
+    get:
+      tags:
+        - Library
+      operationId: getBook
+      summary: Mendapatkan detail buku
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+
+      responses:
+
+        "200":
+          description: Detail buku berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookResponse"
+
+        "404":
+          description: Buku tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # LIBRARY - BORROWING
+  # =========================================================
+
+  /api/v1/library/borrowings:
+    get:
+      tags:
+        - Library
+      operationId: getBorrowings
+      summary: Mendapatkan riwayat peminjaman
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - borrowed
+              - returned
+              - overdue
+
+      responses:
+
+        "200":
+          description: Peminjaman berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BorrowingListResponse"
+
+
+    post:
+      tags:
+        - Library
+      operationId: createBorrowing
+      summary: Mengajukan peminjaman buku
+
+      security:
+        - bearerAuth: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBorrowingRequest"
+
+      responses:
+
+        "201":
+          description: Peminjaman berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BorrowingResponse"
+
+        "422":
+          description: Buku tidak tersedia atau data tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+
+  /api/v1/library/borrowings/{id}:
+    get:
+      tags:
+        - Library
+      operationId: getBorrowing
+      summary: Mendapatkan detail peminjaman
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+
+      responses:
+
+        "200":
+          description: Detail peminjaman berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BorrowingResponse"
+
+        "404":
+          description: Peminjaman tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /api/v1/library/borrowings/{id}/return:
+    post:
+      tags:
+        - Library
+      operationId: returnBorrowing
+      summary: Mengembalikan buku
+      description: Mengembalikan buku yang sedang dipinjam.
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+
+      responses:
+
+        "200":
+          description: Buku berhasil dikembalikan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BorrowingResponse"
+
+        "400":
+          description: Buku tidak dapat dikembalikan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  # =========================================================
+  # ATTENDANCE
+  # =========================================================
+
+  /api/v1/attendance:
+    get:
+      tags:
+        - Attendance
+      operationId: getAttendance
+      summary: Mendapatkan data kehadiran
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-09-01"
+
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: "2026-09-30"
+
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - present
+              - sick
+              - permission
+              - absent
+
+      responses:
+
+        "200":
+          description: Kehadiran berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceListResponse"
+
+
+  # =========================================================
+  # STUDENT NOTES
+  # =========================================================
+
+  /api/v1/student-notes:
+    get:
+      tags:
+        - Student Notes
+      operationId: getStudentNotes
+      summary: Mendapatkan catatan siswa
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+      responses:
+
+        "200":
+          description: Catatan siswa berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentNoteListResponse"
+
+
+  # =========================================================
+  # ANNOUNCEMENTS
+  # =========================================================
+
+  /api/v1/announcements:
+    get:
+      tags:
+        - Announcements
+      operationId: getAnnouncements
+      summary: Mendapatkan pengumuman
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+
+      responses:
+
+        "200":
+          description: Pengumuman berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnouncementListResponse"
+
+
+  /api/v1/announcements/{id}:
+    get:
+      tags:
+        - Announcements
+      operationId: getAnnouncement
+      summary: Mendapatkan detail pengumuman
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+
+      responses:
+
+        "200":
+          description: Detail pengumuman berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnouncementResponse"
+
+        "404":
+          description: Pengumuman tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+# ============================================================
+# COMPONENTS
+# ============================================================
+
+components:
+
+  # ==========================================================
+  # SECURITY
+  # ==========================================================
+
+  securitySchemes:
+
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+
+  # ==========================================================
+  # SCHEMAS
+  # ==========================================================
+
+  schemas:
+
+    # ========================================================
+    # AUTHENTICATION
+    # ========================================================
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+
+        username:
+          type: string
+          example: "20260001"
+
+        password:
+          type: string
+          format: password
+          example: "password123"
+
+
+    LoginResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        message:
+          type: string
+          example: "Login berhasil"
+
+        data:
+          type: object
+          required:
+            - user
+            - token
+          properties:
+
+            user:
+              $ref: "#/components/schemas/User"
+
+            token:
+              type: string
+              example: "mock-token-123456"
+
+
+    UserResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/User"
+
+
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - role
+        - permissions
+        - profile
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        name:
+          type: string
+          example: "Budi Santoso"
+
+        role:
+          type: string
+          enum:
+            - admin
+            - petugas
+            - teacher
+            - student
+            - parent
+          example: student
+
+        permissions:
+          type: array
+          description: Permission yang dimiliki pengguna.
+          items:
+            type: string
+          example:
+            - grade.read
+            - schedule.read
+            - report.read
+            - spp.read
+
+        profile:
+          $ref: "#/components/schemas/UserProfile"
+
+
+    UserProfile:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+
+        type:
+          type: string
+          enum:
+            - admin
+            - petugas
+            - teacher
+            - student
+            - parent
+          example: student
+
+        id:
+          type: integer
+          example: 1001
+
+
+    LogoutResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        message:
+          type: string
+          example: "Logout berhasil"
+
+
+    # ========================================================
+    # PROFILE
+    # ========================================================
+
+    ProfileResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Profile"
+
+
+    Profile:
+      type: object
+      required:
+        - user
+      properties:
+
+        user:
+          $ref: "#/components/schemas/User"
+
+        student:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/StudentProfile"
+
+        parent:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ParentProfile"
+
+
+    StudentProfileResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/StudentProfile"
+
+
+    StudentProfile:
+      type: object
+      required:
+        - id
+        - nis
+        - name
+        - class_name
+      properties:
+
+        id:
+          type: integer
+          example: 1001
+
+        nis:
+          type: string
+          example: "20260001"
+
+        nisn:
+          type: string
+          nullable: true
+          example: "0051234567"
+
+        name:
+          type: string
+          example: "Budi Santoso"
+
+        gender:
+          type: string
+          nullable: true
+          enum:
+            - male
+            - female
+
+        birth_place:
+          type: string
+          nullable: true
+          example: "Surabaya"
+
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2009-05-20"
+
+        class_id:
+          type: integer
+          nullable: true
+          example: 10
+
+        class_name:
+          type: string
+          example: "XI RPL 1"
+
+        major_id:
+          type: integer
+          nullable: true
+          example: 2
+
+        major:
+          type: string
+          nullable: true
+          example: "Rekayasa Perangkat Lunak"
+
+        phone:
+          type: string
+          nullable: true
+          example: "081234567890"
+
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: "budi@example.com"
+
+        address:
+          type: string
+          nullable: true
+          example: "Surabaya"
+
+        photo_url:
+          type: string
+          format: uri
+          nullable: true
+          example: "http://localhost:8069/web/image/student/1001"
+
+
+    ParentProfile:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+
+        id:
+          type: integer
+          example: 2001
+
+        name:
+          type: string
+          example: "Slamet Santoso"
+
+        phone:
+          type: string
+          nullable: true
+          example: "081234567890"
+
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: "orangtua@example.com"
+
+        address:
+          type: string
+          nullable: true
+          example: "Surabaya"
+
+
+    ChildSummary:
+      type: object
+      required:
+        - id
+        - nis
+        - name
+        - class_name
+      properties:
+
+        id:
+          type: integer
+          example: 1001
+
+        nis:
+          type: string
+          example: "20260001"
+
+        name:
+          type: string
+          example: "Budi Santoso"
+
+        class_name:
+          type: string
+          example: "XI RPL 1"
+
+        major:
+          type: string
+          nullable: true
+          example: "Rekayasa Perangkat Lunak"
+
+
+    ChildrenResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChildSummary"
+
+
+    # ========================================================
+    # DASHBOARD
+    # ========================================================
+
+    DashboardResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Dashboard"
+
+
+    Dashboard:
+      type: object
+      required:
+        - user
+        - profile
+        - today_schedule
+        - announcements
+        - spp
+        - attendance
+      properties:
+
+        user:
+          $ref: "#/components/schemas/User"
+
+        profile:
+          $ref: "#/components/schemas/Profile"
+
+        today_schedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/Schedule"
+
+        announcements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Announcement"
+
+        spp:
+          $ref: "#/components/schemas/DashboardSPP"
+
+        attendance:
+          $ref: "#/components/schemas/DashboardAttendance"
+
+
+    DashboardSPP:
+      type: object
+      required:
+        - status
+        - total_bill
+        - paid_amount
+        - remaining_amount
+      properties:
+
+        status:
+          type: string
+          enum:
+            - paid
+            - unpaid
+            - partially_paid
+          example: partially_paid
+
+        total_bill:
+          type: number
+          format: double
+          example: 500000
+
+        paid_amount:
+          type: number
+          format: double
+          example: 250000
+
+        remaining_amount:
+          type: number
+          format: double
+          example: 250000
+
+
+    DashboardAttendance:
+      type: object
+      required:
+        - present
+        - sick
+        - permission
+        - absent
+      properties:
+
+        present:
+          type: integer
+          example: 18
+
+        sick:
+          type: integer
+          example: 1
+
+        permission:
+          type: integer
+          example: 1
+
+        absent:
+          type: integer
+          example: 0
+
+
+    # ========================================================
+    # ACADEMIC
+    # ========================================================
+
+    Schedule:
+      type: object
+      required:
+        - id
+        - subject
+        - date
+        - start_time
+        - end_time
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        subject_id:
+          type: integer
+          nullable: true
+          example: 5
+
+        subject:
+          type: string
+          example: "Pemrograman Web"
+
+        teacher_id:
+          type: integer
+          nullable: true
+          example: 20
+
+        teacher:
+          type: string
+          nullable: true
+          example: "Andi Setiawan"
+
+        class_id:
+          type: integer
+          nullable: true
+          example: 10
+
+        class_name:
+          type: string
+          nullable: true
+          example: "XI RPL 1"
+
+        room:
+          type: string
+          nullable: true
+          example: "Lab RPL 1"
+
+        date:
+          type: string
+          format: date
+          example: "2026-09-30"
+
+        start_time:
+          type: string
+          example: "07:00"
+
+        end_time:
+          type: string
+          example: "08:30"
+
+
+    ScheduleListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Schedule"
+
+
+    Grade:
+      type: object
+      required:
+        - id
+        - subject
+        - score
+        - semester
+        - academic_year
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        subject_id:
+          type: integer
+          nullable: true
+          example: 5
+
+        subject:
+          type: string
+          example: "Pemrograman Web"
+
+        teacher:
+          type: string
+          nullable: true
+          example: "Andi Setiawan"
+
+        score:
+          type: number
+          format: double
+          example: 88
+
+        predicate:
+          type: string
+          nullable: true
+          example: "A"
+
+        semester:
+          type: string
+          enum:
+            - ganjil
+            - genap
+          example: ganjil
+
+        academic_year:
+          type: string
+          example: "2026/2027"
+
+
+    GradeListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Grade"
+
+
+    Report:
+      type: object
+      required:
+        - student
+        - class_name
+        - semester
+        - academic_year
+        - grades
+      properties:
+
+        student:
+          $ref: "#/components/schemas/StudentProfile"
+
+        class_name:
+          type: string
+          example: "XI RPL 1"
+
+        semester:
+          type: string
+          enum:
+            - ganjil
+            - genap
+          example: ganjil
+
+        academic_year:
+          type: string
+          example: "2026/2027"
+
+        grades:
+          type: array
+          items:
+            $ref: "#/components/schemas/Grade"
+
+        attendance_summary:
+          $ref: "#/components/schemas/DashboardAttendance"
+
+        teacher_notes:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudentNote"
+
+
+    ReportResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Report"
+
+
+    # ========================================================
+    # FINANCE
+    # ========================================================
+
+    SPP:
+      type: object
+      required:
+        - id
+        - period
+        - total_bill
+        - paid_amount
+        - remaining_amount
+        - status
+      properties:
+
+        id:
+          type: integer
+          example: 1001
+
+        period:
+          type: string
+          example: "September 2026"
+
+        total_bill:
+          type: number
+          format: double
+          example: 500000
+
+        paid_amount:
+          type: number
+          format: double
+          example: 250000
+
+        remaining_amount:
+          type: number
+          format: double
+          example: 250000
+
+        status:
+          type: string
+          enum:
+            - paid
+            - unpaid
+            - partially_paid
+          example: partially_paid
+
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-09-10"
+
+        payment_proof:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PaymentProof"
+
+
+    SPPResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/SPP"
+
+
+    SPPListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SPP"
+
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+
+    PaymentProofRequest:
+      type: object
+      required:
+        - file
+      properties:
+
+        file:
+          type: string
+          format: binary
+
+        notes:
+          type: string
+          nullable: true
+          example: "Pembayaran SPP bulan September."
+
+
+    PaymentProof:
+      type: object
+      required:
+        - id
+        - spp_id
+        - file_name
+        - status
+        - uploaded_at
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        spp_id:
+          type: integer
+          example: 1001
+
+        file_name:
+          type: string
+          example: "bukti-transfer.jpg"
+
+        file_url:
+          type: string
+          format: uri
+          nullable: true
+          example: "http://localhost:8069/web/content/1001"
+
+        status:
+          type: string
+          enum:
+            - pending
+            - verified
+            - rejected
+          example: pending
+
+        notes:
+          type: string
+          nullable: true
+          example: "Menunggu verifikasi petugas."
+
+        uploaded_at:
+          type: string
+          format: date-time
+          example: "2026-09-30T10:00:00+07:00"
+
+
+    PaymentProofResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        message:
+          type: string
+          example: "Bukti pembayaran berhasil diunggah."
+
+        data:
+          $ref: "#/components/schemas/PaymentProof"
+
+
+    # ========================================================
+    # COOPERATIVE
+    # ========================================================
+
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - stock
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        name:
+          type: string
+          example: "Seragam RPL"
+
+        description:
+          type: string
+          nullable: true
+          example: "Seragam praktik jurusan RPL."
+
+        category:
+          type: string
+          nullable: true
+          example: "Seragam"
+
+        price:
+          type: number
+          format: double
+          example: 150000
+
+        stock:
+          type: integer
+          example: 20
+
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          example: "http://localhost:8069/web/image/product/1"
+
+
+    ProductListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+
+    ProductResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Product"
+
+
+    OrderItem:
+      type: object
+      required:
+        - product_id
+        - product_name
+        - quantity
+        - price
+        - subtotal
+      properties:
+
+        product_id:
+          type: integer
+          example: 1
+
+        product_name:
+          type: string
+          example: "Seragam RPL"
+
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+
+        price:
+          type: number
+          format: double
+          example: 150000
+
+        subtotal:
+          type: number
+          format: double
+          example: 300000
+
+
+    Order:
+      type: object
+      required:
+        - id
+        - status
+        - items
+        - total
+        - created_at
+      properties:
+
+        id:
+          type: integer
+          example: 1001
+
+        order_number:
+          type: string
+          example: "SO-2026-00001"
+
+        status:
+          type: string
+          enum:
+            - draft
+            - processed
+            - ready
+          example: draft
+
+        status_label:
+          type: string
+          example: "Menunggu diproses"
+
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+        total:
+          type: number
+          format: double
+          example: 300000
+
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-09-30T10:00:00+07:00"
+
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+        ready_at:
+          type: string
+          format: date-time
+          nullable: true
+
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - items
+      properties:
+
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CreateOrderItem"
+
+
+    CreateOrderItem:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+
+        product_id:
+          type: integer
+          example: 1
+
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+
+
+    OrderResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Order"
+
+
+    OrderListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+
+    # ========================================================
+    # LIBRARY
+    # ========================================================
+
+    Book:
+      type: object
+      required:
+        - id
+        - title
+        - stock
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        title:
+          type: string
+          example: "Laravel untuk Pemula"
+
+        author:
+          type: string
+          nullable: true
+          example: "Taylor Otwell"
+
+        publisher:
+          type: string
+          nullable: true
+          example: "Tech Publisher"
+
+        isbn:
+          type: string
+          nullable: true
+          example: "9781234567890"
+
+        category:
+          type: string
+          nullable: true
+          example: "Pemrograman"
+
+        description:
+          type: string
+          nullable: true
+          example: "Buku pengantar framework Laravel."
+
+        cover_url:
+          type: string
+          format: uri
+          nullable: true
+
+        stock:
+          type: integer
+          example: 5
+
+        available_stock:
+          type: integer
+          example: 3
+
+
+    BookListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Book"
+
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+
+    BookResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Book"
+
+
+    Borrowing:
+      type: object
+      required:
+        - id
+        - book
+        - borrowed_at
+        - due_date
+        - status
+        - fine
+      properties:
+
+        id:
+          type: integer
+          example: 1001
+
+        book:
+          $ref: "#/components/schemas/Book"
+
+        borrowed_at:
+          type: string
+          format: date
+          example: "2026-09-01"
+
+        due_date:
+          type: string
+          format: date
+          example: "2026-09-08"
+
+        returned_at:
+          type: string
+          format: date
+          nullable: true
+
+        status:
+          type: string
+          enum:
+            - borrowed
+            - returned
+            - overdue
+          example: borrowed
+
+        fine:
+          type: number
+          format: double
+          example: 0
+
+        fine_status:
+          type: string
+          enum:
+            - none
+            - unpaid
+            - paid
+          example: none
+
+
+    BorrowingListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Borrowing"
+
+
+    BorrowingResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Borrowing"
+
+
+    CreateBorrowingRequest:
+      type: object
+      required:
+        - book_id
+      properties:
+
+        book_id:
+          type: integer
+          example: 1
+
+
+    # ========================================================
+    # ATTENDANCE
+    # ========================================================
+
+    Attendance:
+      type: object
+      required:
+        - id
+        - date
+        - status
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        date:
+          type: string
+          format: date
+          example: "2026-09-30"
+
+        status:
+          type: string
+          enum:
+            - present
+            - sick
+            - permission
+            - absent
+          example: present
+
+        notes:
+          type: string
+          nullable: true
+          example: null
+
+
+    AttendanceListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attendance"
+
+
+    # ========================================================
+    # STUDENT NOTES
+    # ========================================================
+
+    StudentNote:
+      type: object
+      required:
+        - id
+        - title
+        - content
+        - created_at
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        title:
+          type: string
+          example: "Catatan Wali Kelas"
+
+        content:
+          type: string
+          example: "Siswa menunjukkan perkembangan yang baik."
+
+        author:
+          type: string
+          nullable: true
+          example: "Andi Setiawan"
+
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-09-30T08:00:00+07:00"
+
+
+    StudentNoteListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudentNote"
+
+
+    # ========================================================
+    # ANNOUNCEMENTS
+    # ========================================================
+
+    Announcement:
+      type: object
+      required:
+        - id
+        - title
+        - content
+        - created_at
+      properties:
+
+        id:
+          type: integer
+          example: 1
+
+        title:
+          type: string
+          example: "Pembayaran SPP Bulan September"
+
+        content:
+          type: string
+          example: "Pembayaran SPP paling lambat tanggal 10 September."
+
+        author:
+          type: string
+          nullable: true
+          example: "Admin Sekolah"
+
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-09-01T08:00:00+07:00"
+
+
+    AnnouncementResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          $ref: "#/components/schemas/Announcement"
+
+
+    AnnouncementListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+
+        success:
+          type: boolean
+          example: true
+
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Announcement"
+
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+
+    # ========================================================
+    # PAGINATION
+    # ========================================================
+
+    Pagination:
+      type: object
+      required:
+        - current_page
+        - per_page
+        - total
+        - last_page
+      properties:
+
+        current_page:
+          type: integer
+          example: 1
+
+        per_page:
+          type: integer
+          example: 20
+
+        total:
+          type: integer
+          example: 50
+
+        last_page:
+          type: integer
+          example: 3
+
+
+    # ========================================================
+    # ERROR
+    # ========================================================
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+
+        success:
+          type: boolean
+          example: false
+
+        message:
+          type: string
+          example: "Token tidak valid."
+
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+        - errors
+      properties:
+
+        success:
+          type: boolean
+          example: false
+
+        message:
+          type: string
+          example: "Data tidak valid."
+
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
